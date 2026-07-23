@@ -111,7 +111,7 @@ export function PartnerForm({ onSuccess }: { onSuccess?: () => void }) {
     )
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
 
@@ -134,8 +134,7 @@ export function PartnerForm({ onSuccess }: { onSuccess?: () => void }) {
 
     setSubmitting(true)
 
-    // Enregistre la candidature en base pour le tableau de bord admin (best-effort).
-    void savePartnerApplication({
+    const result = await savePartnerApplication({
       name,
       phone,
       activityType: activity,
@@ -148,6 +147,11 @@ export function PartnerForm({ onSuccess }: { onSuccess?: () => void }) {
       homeLng: homeLocation.longitude,
       message: message || undefined,
     })
+    if (!result.ok) {
+      setSubmitting(false)
+      setError(result.message ?? "La candidature n’a pas pu être enregistrée.")
+      return
+    }
 
     const lines = [
       "*Coiffeurs225 — Candidature partenaire*",

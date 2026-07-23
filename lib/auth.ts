@@ -10,9 +10,15 @@ const baseURL =
       ? `https://${process.env.VERCEL_URL}`
       : process.env.V0_RUNTIME_URL ?? "http://localhost:3000")
 
+const secret = process.env.BETTER_AUTH_SECRET
+if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+  throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters in production.")
+}
+
 export const auth = betterAuth({
   database: pool,
   baseURL,
+  secret,
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -55,6 +61,7 @@ export const auth = betterAuth({
   },
   trustedOrigins: [
     "http://localhost:3000",
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     ...(process.env.V0_RUNTIME_URL ? [process.env.V0_RUNTIME_URL] : []),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.VERCEL_PROJECT_PRODUCTION_URL

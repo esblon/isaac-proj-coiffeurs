@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import type { AdminOverview } from "@/app/actions/admin"
 import { Button } from "@/components/ui/button"
+import { authClient } from "@/lib/auth-client"
 import {
   ShoppingBag,
   Users,
@@ -97,17 +98,25 @@ export function AdminDashboard({
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/">
+            <Button
+              nativeButton={false}
+              render={<Link href="/" />}
+              variant="outline"
+              size="sm"
+            >
                 <ArrowLeft className="size-4" />
                 Retour au site
-              </Link>
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <a href="/api/admin-login?logout=1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await authClient.signOut()
+                window.location.assign("/admin/login")
+              }}
+            >
                 <LogOut className="size-4" />
                 Quitter
-              </a>
             </Button>
           </div>
         </div>
