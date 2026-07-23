@@ -76,7 +76,7 @@ export function AvailabilityBrowser() {
           placeholder="Ex. Cocody, Riviera, Marcory…"
           aria-label="Secteur recherché"
         />
-        <Button><Search /> Rechercher</Button>
+        <Button type="submit"><Search /> Rechercher</Button>
       </form>
       <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3" aria-live="polite">
         {loading && <p className="text-sm text-muted-foreground">Recherche en cours…</p>}

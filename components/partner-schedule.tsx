@@ -76,7 +76,7 @@ export function PartnerSchedule({
           <span className="mb-1 block text-muted-foreground">Fin</span>
           <Input name="endsAt" type="datetime-local" required />
         </label>
-        <Button className="self-end" disabled={pending}>Ajouter</Button>
+        <Button type="submit" className="self-end" disabled={pending}>Ajouter</Button>
       </form>
       {message && <p className="border-b px-4 py-3 text-sm" role="status">{message}</p>}
       <div className="divide-y">

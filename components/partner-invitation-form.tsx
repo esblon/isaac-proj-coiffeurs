@@ -49,11 +49,11 @@ export function PartnerInvitationForm({ token }: { token: string }) {
       )}
       {message && <p className="text-sm" role="status">{message}</p>}
       {success ? (
-        <Button nativeButton={false} render={<Link href="/connexion?redirect=/partenaire" />} className="w-full">
+        <Button type="button" nativeButton={false} render={<Link href="/connexion?redirect=/partenaire" />} className="w-full">
           Se connecter
         </Button>
       ) : (
-        <Button disabled={pending} className="w-full">
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Activation…" : "Activer mon compte"}
         </Button>
       )}
