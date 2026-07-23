@@ -134,7 +134,7 @@ export function Advertise() {
     setSelected(null)
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
 
@@ -149,8 +149,7 @@ export function Advertise() {
 
     setSubmitting(true)
 
-    // Enregistre la demande en base pour le tableau de bord admin (best-effort).
-    void saveAdRequest({
+    const result = await saveAdRequest({
       package: selected?.name ?? "",
       duration: duration.label,
       estimatedBudget,
@@ -160,6 +159,11 @@ export function Advertise() {
       email: email || undefined,
       message: message || undefined,
     })
+    if (!result.ok) {
+      setSubmitting(false)
+      setError(result.message ?? "La demande n’a pas pu être enregistrée.")
+      return
+    }
 
     const lines = [
       "*Coiffeurs225 — Demande de publicité*",

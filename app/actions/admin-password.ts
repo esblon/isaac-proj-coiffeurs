@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { user } from "@/lib/db/schema"
 import { sql } from "drizzle-orm"
 import { isEmailConfigured } from "@/lib/email"
+import { rateLimit } from "@/lib/security/rate-limit"
 
 type ResetRequestResult = { ok: boolean; message: string }
 
@@ -17,6 +18,13 @@ export async function requestPasswordReset(
   emailRaw: string,
 ): Promise<ResetRequestResult> {
   const email = emailRaw.trim().toLowerCase()
+  const genericMessage =
+    "Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé."
+
+  const allowed = await rateLimit("password-reset", 5, 15 * 60 * 1000)
+  if (!allowed.ok) {
+    return { ok: true, message: genericMessage }
+  }
 
   if (!email || !email.includes("@")) {
     return { ok: false, message: "Veuillez saisir une adresse email valide." }
@@ -38,11 +46,7 @@ export async function requestPasswordReset(
     .limit(1)
 
   if (existing.length === 0) {
-    return {
-      ok: false,
-      message:
-        "Aucun compte n'est associé à cette adresse email. Vérifiez l'adresse saisie.",
-    }
+    return { ok: true, message: genericMessage }
   }
 
   // Le compte existe → déclenche l'envoi du lien via Better Auth.
@@ -60,7 +64,6 @@ export async function requestPasswordReset(
 
   return {
     ok: true,
-    message:
-      "Un lien de réinitialisation vient d'être envoyé à votre adresse email. Pensez à vérifier vos spams.",
+    message: genericMessage,
   }
 }

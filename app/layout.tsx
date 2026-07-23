@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Oswald } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -15,7 +14,6 @@ export const metadata: Metadata = {
   title: 'Coiffeurs 225 — Réservez le meilleur barbier à Abidjan',
   description:
     "Réservez les coiffeurs et barbiers les mieux notés d'Abidjan, commandez votre kit de coiffure homme, abonnez-vous et téléchargez l'application mobile.",
-  generator: 'v0.app',
   icons: {
     icon: [
       {
@@ -60,7 +58,6 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )

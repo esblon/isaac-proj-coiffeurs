@@ -57,6 +57,7 @@ export function CartDrawer() {
   const [phone, setPhone] = useState("")
   const [payment, setPayment] = useState(paymentOptions[0])
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [smsStatus, setSmsStatus] = useState<
     "whatsapp" | "sms" | "whatsapp-link" | "failed" | null
   >(null)
@@ -71,6 +72,7 @@ export function CartDrawer() {
       // réinitialise sur l'étape panier à la fermeture
       setStep("cart")
       setSmsStatus(null)
+      setSubmitError(null)
       setLocation(null)
     }
     return () => {
@@ -83,58 +85,34 @@ export function CartDrawer() {
     // La localisation est obligatoire avant toute validation/paiement.
     if (!location) return
     setSubmitting(true)
-    const order = checkout({ name, phone, payment })
-    setName("")
-    setPhone("")
-
-    // Enregistre la commande en base pour le tableau de bord admin (best-effort).
-    void saveOrder({
-      reference: order.reference,
-      customerName: order.customer.name,
-      customerPhone: order.customer.phone,
-      payment: order.customer.payment,
-      total: order.total,
-      items: order.items.map((i) => ({
-        name: i.name,
-        qty: i.qty,
-        price: i.price,
-        recurring: i.recurring,
-      })),
+    setSubmitError(null)
+    const reference = `C225-${Date.now().toString().slice(-6)}`
+    const result = await saveOrder({
+      reference,
+      customerName: name,
+      customerPhone: phone,
+      payment,
+      items: items.map((item) => ({ id: item.id, qty: item.qty })),
       locationLat: location.latitude,
       locationLng: location.longitude,
     })
 
-    // Confirme la commande au client : WhatsApp en priorité, SMS en repli.
-    const payload = JSON.stringify({
-      reference: order.reference,
-      total: order.total,
-      customer: order.customer,
-      items: order.items.map((i) => ({
-        name: i.name,
-        qty: i.qty,
-        price: i.price,
-        recurring: i.recurring,
-      })),
-    })
-
-    async function notify(endpoint: string): Promise<boolean> {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-        })
-        const data = await res.json()
-        return Boolean(data?.ok)
-      } catch {
-        return false
-      }
+    if (!result.ok) {
+      setSubmitting(false)
+      setSubmitError(result.message ?? "La commande n’a pas pu être enregistrée.")
+      return
     }
 
+    const order = checkout({ name, phone, payment })
+    order.reference = reference
+    if (typeof result.total === "number") order.total = result.total
+    setName("")
+    setPhone("")
+
     try {
-      if (await notify("/api/whatsapp")) {
+      if (result.notification === "whatsapp") {
         setSmsStatus("whatsapp")
-      } else if (await notify("/api/sms")) {
+      } else if (result.notification === "sms") {
         setSmsStatus("sms")
       } else {
         // Repli sans configuration : ouvre WhatsApp côté client avec la
@@ -467,6 +445,11 @@ export function CartDrawer() {
                           : `Payer ${formatPrice(total)}`}
                     </Button>
                   </div>
+                  {submitError && (
+                    <p className="text-center text-xs text-destructive" role="alert">
+                      {submitError}
+                    </p>
+                  )}
                   <p className="text-center text-[11px] text-muted-foreground">
                     Démo de test — aucun paiement réel n&apos;est effectué.
                   </p>
