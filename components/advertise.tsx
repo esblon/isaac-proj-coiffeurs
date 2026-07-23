@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SectionHeading } from "@/components/section-heading"
-import { WHATSAPP_NUMBER, buildWhatsappLink } from "@/lib/site"
+import { buildWhatsappLink } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 import { saveAdRequest } from "@/app/actions/submissions"
 
 const COMMERCIAL_EMAIL = "assistant.comercial@nostalgie.ci"
@@ -103,6 +104,7 @@ const packages: AdPackage[] = [
 ]
 
 export function Advertise() {
+  const { whatsappNumber: WHATSAPP_NUMBER } = useContact()
   const [selected, setSelected] = useState<AdPackage | null>(null)
   const [duration, setDuration] = useState<Duration>(durations[1])
   const [company, setCompany] = useState("")

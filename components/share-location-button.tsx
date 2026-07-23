@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { MapPin, Loader2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WHATSAPP_NUMBER } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 
 type Status = "idle" | "locating" | "error" | "done"
 
@@ -26,6 +26,7 @@ export function ShareLocationButton({
   /** Nom du client, ajouté au message WhatsApp si fourni. */
   customerName?: string
 }) {
+  const { whatsappNumber: WHATSAPP_NUMBER } = useContact()
   const [status, setStatus] = useState<Status>("idle")
   const [message, setMessage] = useState<string | null>(null)
 

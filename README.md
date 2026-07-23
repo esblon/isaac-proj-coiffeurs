@@ -24,7 +24,7 @@ EC2 ne sont requis pour cette phase.
 Construction et controle local :
 
 ```powershell
-docker build --tag isaac-proj-coiffeurs:local .
+docker build --provenance=false --tag isaac-proj-coiffeurs:local .
 docker inspect isaac-proj-coiffeurs:local `
   --format '{{json .Config.Healthcheck}}'
 ```

@@ -43,6 +43,7 @@ const orderSchema = z.object({
 const partnerSchema = z.object({
   name: z.string().trim().min(2).max(100),
   phone: phoneSchema,
+  email: z.string().trim().email().max(254).optional().or(z.literal("")),
   activityType: z.string().trim().max(80).optional(),
   experience: z.string().trim().max(80).optional(),
   hasEquipment: z.string().trim().max(80).optional(),
@@ -141,6 +142,7 @@ export async function savePartnerApplication(
     await db.insert(partnerApplications).values({
       ...parsed.data,
       activityType: parsed.data.activityType || null,
+      email: parsed.data.email || null,
       experience: parsed.data.experience || null,
       hasEquipment: parsed.data.hasEquipment || null,
       idDocumentName: parsed.data.idDocumentName || null,

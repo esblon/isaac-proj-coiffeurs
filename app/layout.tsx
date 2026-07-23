@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Oswald } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ContactProvider } from '@/components/contact-provider'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -56,7 +57,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
+          <ContactProvider>{children}</ContactProvider>
         </ThemeProvider>
       </body>
     </html>
