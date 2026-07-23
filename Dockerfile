@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24.4.1-alpine3.22 AS base
+FROM node:24.16.0-alpine3.22 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -21,7 +21,7 @@ RUN BETTER_AUTH_SECRET=container-build-only-secret-not-used-at-runtime \
   NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
   pnpm build
 
-FROM node:24.4.1-alpine3.22 AS runner
+FROM node:24.16.0-alpine3.22 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
