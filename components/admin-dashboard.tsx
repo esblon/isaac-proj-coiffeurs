@@ -1,36 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
-import type { AdminOverview } from "@/app/actions/admin"
-import { Button } from "@/components/ui/button"
-import { authClient } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
 import {
-  ShoppingBag,
-  Users,
-  Megaphone,
-  Scissors,
-  Wallet,
-  TrendingUp,
+  addContactNumber,
+  addPartnerLedgerEntry,
+  createPartnerAndInvite,
+  updateContactNumber,
+  updateOrderRequest,
+  updatePartnerApplication,
+  type AdminOverview,
+} from "@/app/actions/admin"
+import { authClient } from "@/lib/auth-client"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
   ArrowLeft,
-  MapPin,
+  ClipboardList,
   LogOut,
+  Scissors,
+  Users,
+  Wallet,
 } from "lucide-react"
 
-function formatFcfa(n: number): string {
-  return `${n.toLocaleString("fr-FR")} FCFA`
-}
+type Tab = "orders" | "applications" | "partners" | "contacts" | "history"
 
-function formatDate(d: string | Date): string {
-  return new Date(d).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-type Tab = "orders" | "partners" | "ads" | "users"
+const money = (value: number) => `${value.toLocaleString("fr-FR")} FCFA`
+const date = (value: string | Date) =>
+  new Date(value).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })
 
 export function AdminDashboard({
   overview,
@@ -39,365 +37,336 @@ export function AdminDashboard({
   overview: AdminOverview
   adminEmail: string
 }) {
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>("orders")
-  const { metrics, revenueByDay, orders, partners, ads, users } = overview
+  const [pending, startTransition] = useTransition()
+  const [message, setMessage] = useState<string | null>(null)
 
-  const maxRevenue = Math.max(1, ...revenueByDay.map((d) => d.revenue))
+  function run(action: () => Promise<unknown>) {
+    setMessage(null)
+    startTransition(async () => {
+      try {
+        await action()
+        setMessage("Modification enregistrée.")
+        router.refresh()
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Une erreur est survenue.")
+      }
+    })
+  }
 
-  const metricCards = [
-    {
-      label: "Chiffre d'affaires",
-      value: formatFcfa(metrics.totalRevenue),
-      icon: Wallet,
-    },
-    {
-      label: "Commandes",
-      value: metrics.totalOrders.toLocaleString("fr-FR"),
-      icon: ShoppingBag,
-    },
-    {
-      label: "Panier moyen",
-      value: formatFcfa(metrics.avgOrderValue),
-      icon: TrendingUp,
-    },
-    {
-      label: "Candidatures coiffeurs",
-      value: metrics.totalPartners.toLocaleString("fr-FR"),
-      icon: Scissors,
-    },
-    {
-      label: "Demandes annonceurs",
-      value: metrics.totalAds.toLocaleString("fr-FR"),
-      icon: Megaphone,
-    },
-    {
-      label: "Comptes clients",
-      value: metrics.totalUsers.toLocaleString("fr-FR"),
-      icon: Users,
-    },
-  ]
-
-  const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: "orders", label: "Commandes", count: orders.length },
-    { id: "partners", label: "Coiffeurs", count: partners.length },
-    { id: "ads", label: "Annonceurs", count: ads.length },
-    { id: "users", label: "Utilisateurs", count: users.length },
-  ]
+  const cards = [
+    ["Revenus", money(overview.metrics.totalRevenue), Wallet],
+    ["Demandes", String(overview.metrics.totalOrders), ClipboardList],
+    ["Candidatures", String(overview.metrics.totalApplications), Scissors],
+    ["Partenaires", String(overview.metrics.totalPartners), Users],
+  ] as const
 
   return (
     <main className="min-h-screen bg-background">
-      {/* En-tête */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-5">
           <div>
-            <h1 className="font-heading text-2xl font-bold uppercase tracking-tight">
-              Tableau de bord
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Vue complète du site et de l&apos;application · {adminEmail}
-            </p>
+            <h1 className="font-heading text-2xl font-bold uppercase">Administration</h1>
+            <p className="text-sm text-muted-foreground">{adminEmail}</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              nativeButton={false}
-              render={<Link href="/" />}
-              variant="outline"
-              size="sm"
-            >
-                <ArrowLeft className="size-4" />
-                Retour au site
+            <Button nativeButton={false} render={<Link href="/" />} variant="outline" size="sm">
+              <ArrowLeft className="size-4" /> Site
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={async () => {
                 await authClient.signOut()
-                window.location.assign("/admin/login")
+                location.assign("/admin/login")
               }}
             >
-                <LogOut className="size-4" />
-                Quitter
+              <LogOut className="size-4" /> Quitter
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Cartes métriques */}
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {metricCards.map((m) => (
-            <div
-              key={m.label}
-              className="rounded-xl border border-border bg-card p-4"
-            >
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <m.icon className="size-4 text-primary" />
-                <span className="text-xs font-medium">{m.label}</span>
-              </div>
-              <p className="mt-2 font-heading text-2xl font-bold tabular-nums">
-                {m.value}
+      <div className="mx-auto max-w-7xl space-y-7 px-4 py-7">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {cards.map(([label, value, Icon]) => (
+            <article key={label} className="rounded-xl border bg-card p-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Icon className="size-4 text-primary" /> {label}
               </p>
-            </div>
+              <p className="mt-2 text-xl font-bold">{value}</p>
+            </article>
           ))}
         </section>
 
-        {/* Graphique revenu par jour */}
-        <section className="mt-8 rounded-xl border border-border bg-card p-6">
-          <h2 className="font-heading text-lg font-bold uppercase tracking-tight">
-            Revenu des 14 derniers jours
-          </h2>
-          {revenueByDay.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Aucune commande enregistrée pour le moment.
-            </p>
-          ) : (
-            <div className="mt-6 flex h-48 items-end gap-2">
-              {revenueByDay.map((d) => (
-                <div
-                  key={d.date}
-                  className="flex flex-1 flex-col items-center gap-2"
-                  title={`${formatFcfa(d.revenue)} · ${d.orders} commande(s)`}
-                >
-                  <div className="flex w-full flex-1 items-end">
-                    <div
-                      className="w-full rounded-t bg-primary transition-all"
-                      style={{
-                        height: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%`,
-                      }}
-                    />
+        <nav className="flex flex-wrap gap-2 border-b pb-3">
+          {([
+            ["orders", "Demandes coiffure"],
+            ["applications", "Candidatures"],
+            ["partners", "Partenaires"],
+            ["contacts", "Contacts"],
+            ["history", "Historique admin"],
+          ] as [Tab, string][]).map(([id, label]) => (
+            <Button
+              key={id}
+              variant={tab === id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </Button>
+          ))}
+        </nav>
+
+        {message && (
+          <p className="rounded-lg border bg-card px-4 py-3 text-sm" role="status">
+            {message}
+          </p>
+        )}
+
+        {tab === "orders" && (
+          <section className="space-y-3">
+            {overview.orders.map((order) => (
+              <article key={order.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div>
+                    <h2 className="font-semibold">{order.reference} · {order.customerName}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {order.customerPhone} · {money(order.total)} · {date(order.createdAt)}
+                    </p>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    {new Date(d.date).toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
-                  </span>
+                  <span className="text-sm font-medium">{order.status}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Onglets de données */}
-        <section className="mt-8">
-          <div className="flex flex-wrap gap-2 border-b border-border">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  tab === t.id
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                  {t.count}
-                </span>
-              </button>
+                <form
+                  className="mt-4 grid gap-2 md:grid-cols-[180px_1fr_200px_auto]"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const data = new FormData(event.currentTarget)
+                    run(() =>
+                      updateOrderRequest({
+                        id: order.id,
+                        status: data.get("status"),
+                        response: data.get("response"),
+                        partnerId: data.get("partnerId")
+                          ? Number(data.get("partnerId"))
+                          : null,
+                      }),
+                    )
+                  }}
+                >
+                  <select name="status" defaultValue={order.status} className="rounded-md border bg-background px-3">
+                    <option value="nouveau">Nouveau</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="accepte">Accepté</option>
+                    <option value="termine">Terminé</option>
+                    <option value="annule">Annulé</option>
+                  </select>
+                  <Input name="response" defaultValue={order.adminResponse ?? ""} placeholder="Réponse au client" />
+                  <select
+                    name="partnerId"
+                    defaultValue={order.assignedPartnerId ?? ""}
+                    className="rounded-md border bg-background px-3"
+                  >
+                    <option value="">Non assigné</option>
+                    {overview.partners.map((partner) => (
+                      <option key={partner.id} value={partner.id}>{partner.name}</option>
+                    ))}
+                  </select>
+                  <Button disabled={pending}>Enregistrer</Button>
+                </form>
+              </article>
             ))}
-          </div>
+            {!overview.orders.length && <Empty label="Aucune demande de coiffure." />}
+          </section>
+        )}
 
-          <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-            {tab === "orders" && <OrdersTable rows={orders} />}
-            {tab === "partners" && <PartnersTable rows={partners} />}
-            {tab === "ads" && <AdsTable rows={ads} />}
-            {tab === "users" && <UsersTable rows={users} />}
-          </div>
-        </section>
+        {tab === "applications" && (
+          <section className="space-y-3">
+            {overview.applications.map((application) => (
+              <article key={application.id} className="rounded-xl border bg-card p-4">
+                <h2 className="font-semibold">{application.name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {application.phone} · {application.email ?? "email non fourni"} · {application.activityType ?? "activité non précisée"}
+                </p>
+                <p className="mt-2 text-sm">{application.message}</p>
+                <form
+                  className="mt-4 grid gap-2 md:grid-cols-[180px_1fr_auto]"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const data = new FormData(event.currentTarget)
+                    run(() =>
+                      updatePartnerApplication({
+                        id: application.id,
+                        status: data.get("status"),
+                        response: data.get("response"),
+                      }),
+                    )
+                  }}
+                >
+                  <select name="status" defaultValue={application.status} className="rounded-md border bg-background px-3">
+                    <option value="nouveau">Nouveau</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="valide">Validé</option>
+                    <option value="refuse">Refusé</option>
+                  </select>
+                  <Input name="response" defaultValue={application.adminResponse ?? ""} placeholder="Réponse au candidat" />
+                  <Button disabled={pending}>Enregistrer</Button>
+                </form>
+              </article>
+            ))}
+            {!overview.applications.length && <Empty label="Aucune candidature." />}
+          </section>
+        )}
+
+        {tab === "partners" && (
+          <section className="space-y-5">
+            <form
+              className="grid gap-2 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_1fr_auto]"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const form = event.currentTarget
+                const data = new FormData(form)
+                run(async () => {
+                  await createPartnerAndInvite({
+                    name: data.get("name"),
+                    email: data.get("email"),
+                    phone: data.get("phone"),
+                  })
+                  form.reset()
+                })
+              }}
+            >
+              <Input name="name" placeholder="Nom du partenaire" required />
+              <Input name="email" type="email" placeholder="Email" required />
+              <Input name="phone" placeholder="Téléphone" required />
+              <Button disabled={pending}>Créer et inviter</Button>
+            </form>
+
+            {overview.partners.map((partner) => (
+              <article key={partner.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div>
+                    <h2 className="font-semibold">{partner.name}</h2>
+                    <p className="text-sm text-muted-foreground">{partner.email} · {partner.phone}</p>
+                  </div>
+                  <span className="text-sm font-medium">{partner.status}</span>
+                </div>
+                <p className="mt-3 text-sm font-semibold">
+                  Gains : {money(partner.ledger.reduce((sum, item) => sum + item.amount, 0))}
+                </p>
+                <form
+                  className="mt-3 grid gap-2 md:grid-cols-[150px_1fr_160px_auto]"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const data = new FormData(event.currentTarget)
+                    run(() =>
+                      addPartnerLedgerEntry({
+                        partnerId: partner.id,
+                        type: data.get("type"),
+                        description: data.get("description"),
+                        amount: Number(data.get("amount")),
+                      }),
+                    )
+                  }}
+                >
+                  <select name="type" className="rounded-md border bg-background px-3">
+                    <option value="historique">Historique</option>
+                    <option value="gain">Gain</option>
+                    <option value="paiement">Paiement</option>
+                  </select>
+                  <Input name="description" placeholder="Description" required />
+                  <Input name="amount" type="number" defaultValue="0" />
+                  <Button disabled={pending}>Ajouter</Button>
+                </form>
+              </article>
+            ))}
+          </section>
+        )}
+
+        {tab === "contacts" && (
+          <section className="space-y-4">
+            <form
+              className="grid gap-2 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_160px_auto]"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const form = event.currentTarget
+                const data = new FormData(form)
+                run(async () => {
+                  await addContactNumber({
+                    label: data.get("label"),
+                    number: data.get("number"),
+                    isActive: data.get("isActive") === "true",
+                  })
+                  form.reset()
+                })
+              }}
+            >
+              <Input name="label" placeholder="Libellé (WhatsApp, support…)" required />
+              <Input name="number" placeholder="+225…" required />
+              <select name="isActive" className="rounded-md border bg-background px-3">
+                <option value="true">Actif</option>
+                <option value="false">Inactif</option>
+              </select>
+              <Button disabled={pending}>Ajouter</Button>
+            </form>
+            {overview.contacts.map((contact) => (
+              <form
+                key={contact.id}
+                className="grid gap-2 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_160px_auto]"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const data = new FormData(event.currentTarget)
+                  run(() =>
+                    updateContactNumber({
+                      id: contact.id,
+                      label: data.get("label"),
+                      number: data.get("number"),
+                      isActive: data.get("isActive") === "true",
+                    }),
+                  )
+                }}
+              >
+                <Input name="label" defaultValue={contact.label} required />
+                <Input name="number" defaultValue={contact.number} required />
+                <select name="isActive" defaultValue={String(contact.isActive)} className="rounded-md border bg-background px-3">
+                  <option value="true">Actif</option>
+                  <option value="false">Inactif</option>
+                </select>
+                <Button disabled={pending}>Modifier</Button>
+              </form>
+            ))}
+          </section>
+        )}
+
+        {tab === "history" && (
+          <section className="overflow-x-auto rounded-xl border bg-card">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50">
+                <tr><th className="p-3">Date</th><th>Admin</th><th>Objet</th><th>Action</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {overview.audit.map((event) => (
+                  <tr key={event.id}>
+                    <td className="p-3">{date(event.createdAt)}</td>
+                    <td>{event.actorEmail}</td>
+                    <td>{event.entityType} #{event.entityId}</td>
+                    <td>{event.action}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
       </div>
     </main>
   )
+}
 
-  function EmptyRow({ cols, label }: { cols: number; label: string }) {
-    return (
-      <tr>
-        <td
-          colSpan={cols}
-          className="px-4 py-8 text-center text-sm text-muted-foreground"
-        >
-          {label}
-        </td>
-      </tr>
-    )
-  }
-
-  function OrdersTable({ rows }: { rows: AdminOverview["orders"] }) {
-    return (
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Référence</th>
-            <th className="px-4 py-3">Client</th>
-            <th className="px-4 py-3">Téléphone</th>
-            <th className="px-4 py-3">Total</th>
-            <th className="px-4 py-3">Paiement</th>
-            <th className="px-4 py-3">Position</th>
-            <th className="px-4 py-3">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {rows.length === 0 ? (
-            <EmptyRow cols={7} label="Aucune commande." />
-          ) : (
-            rows.map((o) => (
-              <tr key={o.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-mono text-xs">{o.reference}</td>
-                <td className="px-4 py-3 font-medium">{o.customerName}</td>
-                <td className="px-4 py-3">{o.customerPhone}</td>
-                <td className="px-4 py-3 font-semibold">
-                  {formatFcfa(o.total)}
-                </td>
-                <td className="px-4 py-3">{o.payment ?? "—"}</td>
-                <td className="px-4 py-3">
-                  {o.locationLat && o.locationLng ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${o.locationLat},${o.locationLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
-                      <MapPin className="size-3.5" />
-                      Carte
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatDate(o.createdAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    )
-  }
-
-  function PartnersTable({ rows }: { rows: AdminOverview["partners"] }) {
-    return (
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Nom</th>
-            <th className="px-4 py-3">Téléphone</th>
-            <th className="px-4 py-3">Activité</th>
-            <th className="px-4 py-3">Zones</th>
-            <th className="px-4 py-3">Pièce ID</th>
-            <th className="px-4 py-3">Domicile</th>
-            <th className="px-4 py-3">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {rows.length === 0 ? (
-            <EmptyRow cols={7} label="Aucune candidature." />
-          ) : (
-            rows.map((p) => (
-              <tr key={p.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-medium">{p.name}</td>
-                <td className="px-4 py-3">{p.phone}</td>
-                <td className="px-4 py-3">{p.activityType ?? "—"}</td>
-                <td className="px-4 py-3 text-xs">
-                  {(p.zones as string[]).join(", ") || "—"}
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  {p.idDocumentName ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {p.homeLat && p.homeLng ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${p.homeLat},${p.homeLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
-                      <MapPin className="size-3.5" />
-                      Carte
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatDate(p.createdAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    )
-  }
-
-  function AdsTable({ rows }: { rows: AdminOverview["ads"] }) {
-    return (
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Entreprise</th>
-            <th className="px-4 py-3">Contact</th>
-            <th className="px-4 py-3">Téléphone</th>
-            <th className="px-4 py-3">Package</th>
-            <th className="px-4 py-3">Durée</th>
-            <th className="px-4 py-3">Budget</th>
-            <th className="px-4 py-3">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {rows.length === 0 ? (
-            <EmptyRow cols={7} label="Aucune demande annonceur." />
-          ) : (
-            rows.map((a) => (
-              <tr key={a.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-medium">{a.company}</td>
-                <td className="px-4 py-3">{a.contact}</td>
-                <td className="px-4 py-3">{a.phone}</td>
-                <td className="px-4 py-3">{a.package}</td>
-                <td className="px-4 py-3">{a.duration ?? "—"}</td>
-                <td className="px-4 py-3 font-semibold">
-                  {a.estimatedBudget ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatDate(a.createdAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    )
-  }
-
-  function UsersTable({ rows }: { rows: AdminOverview["users"] }) {
-    return (
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Nom</th>
-            <th className="px-4 py-3">Email</th>
-            <th className="px-4 py-3">Vérifié</th>
-            <th className="px-4 py-3">Inscription</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {rows.length === 0 ? (
-            <EmptyRow cols={4} label="Aucun utilisateur." />
-          ) : (
-            rows.map((u) => (
-              <tr key={u.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-medium">{u.name}</td>
-                <td className="px-4 py-3">{u.email}</td>
-                <td className="px-4 py-3">{u.emailVerified ? "Oui" : "Non"}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatDate(u.createdAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    )
-  }
+function Empty({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  )
 }

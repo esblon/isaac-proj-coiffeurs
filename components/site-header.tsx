@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { Scissors, MessageCircle, Menu, X, ShoppingBag, LogOut, User, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WHATSAPP_URL, PHONE_DISPLAY } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 import { useCart } from "@/lib/cart-context"
 import { authClient } from "@/lib/auth-client"
 import { isCurrentUserAdmin } from "@/app/actions/admin"
@@ -38,6 +38,7 @@ function CartButton({ count, onClick }: { count: number; onClick: () => void }) 
 }
 
 export function SiteHeader() {
+  const { whatsappUrl: WHATSAPP_URL, phoneDisplay: PHONE_DISPLAY } = useContact()
   const [open, setOpen] = useState(false)
   const { count, openCart } = useCart()
   const router = useRouter()

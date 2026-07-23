@@ -1,9 +1,13 @@
+"use client"
+
 import { Scissors, Mail, MapPin, MessageCircle, Globe } from "lucide-react"
-import { SITE_URL, WHATSAPP_URL, PHONE_DISPLAY } from "@/lib/site"
+import { SITE_URL } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 
 const siteLabel = SITE_URL.replace(/^https?:\/\//, "")
 
 export function SiteFooter() {
+  const { whatsappUrl: WHATSAPP_URL, phoneDisplay: PHONE_DISPLAY } = useContact()
   return (
     <footer className="border-t border-border bg-card/40">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

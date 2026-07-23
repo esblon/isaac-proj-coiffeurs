@@ -13,7 +13,8 @@ import {
   FileCheck,
 } from "lucide-react"
 import { zones } from "@/lib/data"
-import { WHATSAPP_NUMBER, buildWhatsappLink } from "@/lib/site"
+import { buildWhatsappLink } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 import { savePartnerApplication } from "@/app/actions/submissions"
 
 type HomeLocation = {
@@ -43,6 +44,7 @@ const EXPERIENCE_OPTIONS = [
 ]
 
 export function PartnerForm({ onSuccess }: { onSuccess?: () => void }) {
+  const { whatsappNumber: WHATSAPP_NUMBER } = useContact()
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
@@ -137,6 +139,7 @@ export function PartnerForm({ onSuccess }: { onSuccess?: () => void }) {
     const result = await savePartnerApplication({
       name,
       phone,
+      email,
       activityType: activity,
       experience,
       hasEquipment: hasEquipment ? "Oui" : "Non",

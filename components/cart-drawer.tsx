@@ -16,10 +16,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { useCart, formatPrice, type CartItemType } from "@/lib/cart-context"
 import {
-  PHONE_DISPLAY,
   toWhatsappNumber,
   buildWhatsappLink,
 } from "@/lib/site"
+import { useContact } from "@/components/contact-provider"
 import {
   ShareLocationButton,
   type LocationInfo,
@@ -41,6 +41,7 @@ const typeLabel: Record<CartItemType, string> = {
 const paymentOptions = ["Orange Money", "Wave", "MTN MoMo", "Moov Money", "Carte bancaire"]
 
 export function CartDrawer() {
+  const { phoneDisplay: PHONE_DISPLAY } = useContact()
   const {
     items,
     isOpen,
