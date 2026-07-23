@@ -15,7 +15,10 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN sed -i 's/\r$//' ./scripts/*.sh ./migrations/*.sql
+RUN sed -i 's/\r$//' ./scripts/*.sh ./migrations/*.sql \
+  && sed -i 's/$/\r/' \
+    ./migrations/0001_initial.sql \
+    ./migrations/0002_isaac_coif_001.sql
 RUN BETTER_AUTH_SECRET=container-build-only-secret-not-used-at-runtime \
   DATABASE_URL=postgresql://unused:unused@127.0.0.1:5432/unused \
   BETTER_AUTH_URL=http://localhost:3000 \
