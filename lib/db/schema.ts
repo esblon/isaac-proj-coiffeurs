@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core"
 
 // --- Better Auth tables (noms de colonnes en camelCase requis par Better Auth) ---
@@ -129,6 +130,7 @@ export const partners = pgTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
+    sector: text("sector"),
     status: text("status").notNull().default("invite"),
     invitedAt: timestamp("invited_at", { withTimezone: true }),
     activatedAt: timestamp("activated_at", { withTimezone: true }),
@@ -142,6 +144,37 @@ export const partners = pgTable(
   (table) => [
     uniqueIndex("partners_email_unique").on(table.email),
     uniqueIndex("partners_user_id_unique").on(table.userId),
+  ],
+)
+
+export const partnerAvailabilities = pgTable(
+  "partner_availabilities",
+  {
+    id: serial("id").primaryKey(),
+    partnerId: integer("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    status: text("status").notNull().default("disponible"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("partner_availabilities_slot_unique").on(
+      table.partnerId,
+      table.startsAt,
+      table.endsAt,
+    ),
+    index("partner_availabilities_search_idx").on(
+      table.status,
+      table.startsAt,
+      table.partnerId,
+    ),
   ],
 )
 

@@ -3,15 +3,18 @@
 import { createHash } from "node:crypto"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { and, desc, eq, gt } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+import { and, desc, eq, gt, lt } from "drizzle-orm"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import {
   partnerInvitations,
+  partnerAvailabilities,
   partnerLedger,
   partners,
 } from "@/lib/db/schema"
+import { availabilityInputSchema } from "@/lib/availability"
 
 export async function acceptPartnerInvitation(input: unknown) {
   const parsed = z
@@ -93,9 +96,62 @@ export async function getPartnerDashboard() {
     .from(partnerLedger)
     .where(eq(partnerLedger.partnerId, identity.partner.id))
     .orderBy(desc(partnerLedger.createdAt))
+  const availabilities = await db
+    .select()
+    .from(partnerAvailabilities)
+    .where(eq(partnerAvailabilities.partnerId, identity.partner.id))
+    .orderBy(partnerAvailabilities.startsAt)
   return {
     partner: identity.partner,
     ledger,
     gains: ledger.reduce((sum, entry) => sum + entry.amount, 0),
+    availabilities,
   }
+}
+
+export async function addPartnerAvailability(input: unknown) {
+  const identity = await getPartnerSession()
+  if (!identity) throw new Error("Connexion partenaire requise.")
+  const parsed = availabilityInputSchema.parse(input)
+  if (parsed.startsAt <= new Date()) {
+    throw new Error("Le créneau doit commencer dans le futur.")
+  }
+  const overlap = await db
+    .select({ id: partnerAvailabilities.id })
+    .from(partnerAvailabilities)
+    .where(
+      and(
+        eq(partnerAvailabilities.partnerId, identity.partner.id),
+        lt(partnerAvailabilities.startsAt, parsed.endsAt),
+        gt(partnerAvailabilities.endsAt, parsed.startsAt),
+      ),
+    )
+    .limit(1)
+  if (overlap.length) throw new Error("Ce créneau chevauche une disponibilité existante.")
+  await db.insert(partnerAvailabilities).values({
+    partnerId: identity.partner.id,
+    startsAt: parsed.startsAt,
+    endsAt: parsed.endsAt,
+  })
+  revalidatePath("/partenaire")
+  revalidatePath("/")
+  return { ok: true }
+}
+
+export async function removePartnerAvailability(input: unknown) {
+  const identity = await getPartnerSession()
+  if (!identity) throw new Error("Connexion partenaire requise.")
+  const { id } = z.object({ id: z.number().int().positive() }).parse(input)
+  await db
+    .delete(partnerAvailabilities)
+    .where(
+      and(
+        eq(partnerAvailabilities.id, id),
+        eq(partnerAvailabilities.partnerId, identity.partner.id),
+        eq(partnerAvailabilities.status, "disponible"),
+      ),
+    )
+  revalidatePath("/partenaire")
+  revalidatePath("/")
+  return { ok: true }
 }

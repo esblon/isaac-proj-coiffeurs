@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getPartnerDashboard } from "@/app/actions/partner"
 import { Button } from "@/components/ui/button"
+import { PartnerSchedule } from "@/components/partner-schedule"
 
 export const metadata = {
   title: "Espace partenaire — Coiffeurs225",
@@ -36,6 +37,7 @@ export default async function PartnerPage() {
             <p className="mt-2 text-2xl font-bold capitalize">{dashboard.partner.status}</p>
           </article>
         </section>
+        <PartnerSchedule availabilities={dashboard.availabilities} />
         <section className="rounded-xl border bg-card">
           <div className="border-b p-4">
             <h2 className="font-heading text-lg font-bold">Mon historique</h2>
