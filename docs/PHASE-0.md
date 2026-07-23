@@ -52,11 +52,14 @@ Les anciens liens administrateur ne fonctionnent plus. Avant le déploiement :
 Ne pas connecter cette PR à Vercel. Après validation fonctionnelle locale :
 
 1. préparer une image Docker Next.js non privilégiée ;
-2. créer un environnement AWS de développement par Infrastructure as Code ;
-3. provisionner ECR, le compute (App Runner ou ECS Fargate), RDS PostgreSQL privé, Secrets Manager et les logs CloudWatch ;
-4. exposer l’application par CloudFront/ALB avec TLS ;
-5. configurer les variables de `.env.example` dans Secrets Manager ou le service de déploiement ;
-6. exécuter un smoke test AWS avant toute promotion.
+2. publier l’image immuable dans l’ECR `blon/isaac-proj-coiffeurs` ;
+3. réutiliser l’EC2, le moteur PostgreSQL et Caddy existants ;
+4. créer la base logique `coiffeurs225` et le rôle `coiffeurs225_app` dans le
+   conteneur PostgreSQL existant, sans RDS ;
+5. installer la configuration depuis le SecureString Parameter Store
+   `/blon/nonprod/coiffeurs225/runtime/app-env` ;
+6. exécuter les migrations versionnées puis un smoke test UAT avant toute
+   promotion.
 
 ## Validation
 
