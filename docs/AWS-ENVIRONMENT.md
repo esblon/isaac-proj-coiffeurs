@@ -117,24 +117,64 @@ architecture AWS cible complète pour Coiffeurs225 :
 - stockage S3 applicatif ;
 - environnement de production.
 
-## Décision d’intégration recommandée
+## Décision d’intégration retenue
 
-Réutiliser le VPC, les conventions de tags, IAM Identity Center, Route 53
-partagé, CloudFormation, SSM et les horaires NonProd.
+Pour l’UAT initial, Coiffeurs225 partage la même EC2 `t3.small` que la
+Bibliothèque. La charge attendue est limitée à trois testeurs, généralement non
+simultanés. Aucun RDS ni seconde EC2 n’est ajouté à ce stade.
 
-Ne pas déployer immédiatement Coiffeurs225 dans le compose existant de la
-Bibliothèque. L’EC2 `t3.small` héberge déjà PostgreSQL, l’application, les
-migrations et Caddy de la Bibliothèque avec des limites mémoire. Il faut choisir
-explicitement entre :
+Les composants mutualisés sont :
 
-1. une seconde EC2 dédiée dans le VPC pour un UAT économique ;
-2. ECS Fargate/App Runner et RDS pour une base plus proche de la production.
+- l’EC2 et son volume EBS ;
+- le moteur/conteneur PostgreSQL ;
+- Caddy et les ports publics 80/443 ;
+- le VPC, l’Elastic IP, SSM et les horaires NonProd.
 
-Pour respecter la roadmap sans surarchitecture, la recommandation est :
+Les composants isolés par application sont :
 
-- UAT initial : EC2 dédiée, ECR dédié, Caddy/HTTPS et configuration SSM ;
-- production : ECS Fargate ou App Runner, ALB/CloudFront et RDS PostgreSQL
-  Multi-AZ selon le niveau de disponibilité attendu.
+- dépôt ECR et images ;
+- base logique PostgreSQL ;
+- rôle PostgreSQL ;
+- migrations ;
+- configuration runtime SecureString ;
+- répertoire de déploiement et service Docker Compose ;
+- domaine et routage Caddy ;
+- volumes applicatifs si nécessaires.
+
+### Décision PostgreSQL
+
+Créer une **deuxième base logique** dans le même serveur/conteneur PostgreSQL :
+
+```text
+Base Bibliothèque existante   → inchangée
+Base Coiffeurs225             → coiffeurs225
+Rôle propriétaire dédié       → coiffeurs225_app
+```
+
+Ne pas renommer la base existante en `eblonenterprise` et ne pas utiliser une
+base commune séparée uniquement par schémas pour l’UAT. Cette option :
+
+- couplerait les cycles de migration des applications ;
+- augmenterait le rayon d’impact d’une erreur de permission ou de migration ;
+- compliquerait Better Auth et les tables applicatives aux noms génériques ;
+- imposerait une migration risquée de la Bibliothèque sans bénéfice immédiat ;
+- rendrait plus difficile une future extraction vers RDS.
+
+Deux bases logiques dans le même moteur ont pratiquement le même coût de
+ressources que deux schémas, tout en offrant une meilleure isolation et une
+migration future plus simple.
+
+### Capacité
+
+La mutualisation doit être accompagnée de limites Docker revues. Les limites
+actuelles de la Bibliothèque consomment déjà une part importante des 2 Gio
+environ d’une `t3.small`. Avant de démarrer Coiffeurs225 :
+
+- mesurer la mémoire réellement disponible ;
+- réduire ou rééquilibrer les limites des services UAT ;
+- ajouter un fichier swap uniquement si la politique d’exploitation l’accepte ;
+- surveiller mémoire, disque et redémarrages OOM ;
+- conserver un seuil d’arrêt si la mémoire disponible devient insuffisante.
 
 ## Commandes de vérification
 
@@ -176,12 +216,17 @@ aws ssm describe-instance-information `
 Ces commandes sont en lecture seule. Ne jamais appeler `ssm get-parameter
 --with-decryption` pour réaliser un inventaire.
 
-## Next step — concevoir le socle Coiffeurs225
+## Next step — étendre l’UAT mutualisé
 
-1. Valider le sous-domaine UAT proposé.
-2. Choisir EC2 dédiée ou ECS/App Runner pour l’UAT.
-3. Ajouter au dépôt `eblon-aws-infrastructure` un template isolé
-   `coiffeurs225-uat` qui importe les Outputs du VPC existant.
-4. Créer l’ECR `blon/isaac-proj-coiffeurs`.
-5. Définir les paramètres runtime sans valeur secrète dans Git.
-6. Produire un Change Set CloudFormation et le relire avant exécution.
+1. Valider le sous-domaine `uat.coiffeurs.blon-enterprises.com`.
+2. Ajouter au template existant l’ECR `blon/isaac-proj-coiffeurs` et les
+   permissions de pull strictement nécessaires.
+3. Étendre le déploiement Compose avec le service Coiffeurs225, sans créer un
+   second PostgreSQL.
+4. Créer de façon idempotente la base `coiffeurs225` et son rôle propriétaire
+   depuis une procédure d’initialisation sécurisée.
+5. Ajouter `/blon/nonprod/coiffeurs225/runtime/app-env` sans valeur secrète dans
+   Git.
+6. Ajouter le virtual host Caddy du sous-domaine Coiffeurs225.
+7. Mesurer la capacité, construire les images, produire un Change Set et le
+   relire avant exécution.
