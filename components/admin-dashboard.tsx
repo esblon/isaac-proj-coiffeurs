@@ -181,7 +181,7 @@ export function AdminDashboard({
                       <option key={partner.id} value={partner.id}>{partner.name}</option>
                     ))}
                   </select>
-                  <Button disabled={pending}>Enregistrer</Button>
+                  <Button type="submit" disabled={pending}>Enregistrer</Button>
                 </form>
               </article>
             ))}
@@ -219,7 +219,7 @@ export function AdminDashboard({
                     <option value="refuse">Refusé</option>
                   </select>
                   <Input name="response" defaultValue={application.adminResponse ?? ""} placeholder="Réponse au candidat" />
-                  <Button disabled={pending}>Enregistrer</Button>
+                  <Button type="submit" disabled={pending}>Enregistrer</Button>
                 </form>
               </article>
             ))}
@@ -250,7 +250,7 @@ export function AdminDashboard({
               <Input name="email" type="email" placeholder="Email" required />
               <Input name="sector" placeholder="Secteur (ex. Cocody)" required />
               <Input name="phone" placeholder="Téléphone" required />
-              <Button disabled={pending}>Créer et inviter</Button>
+              <Button type="submit" disabled={pending}>Créer et inviter</Button>
             </form>
 
             {overview.partners.map((partner) => (
@@ -287,7 +287,7 @@ export function AdminDashboard({
                     placeholder="Secteur"
                     required
                   />
-                  <Button variant="outline" disabled={pending}>
+                  <Button type="submit" variant="outline" disabled={pending}>
                     Modifier le secteur
                   </Button>
                 </form>
@@ -313,7 +313,7 @@ export function AdminDashboard({
                   </select>
                   <Input name="description" placeholder="Description" required />
                   <Input name="amount" type="number" defaultValue="0" />
-                  <Button disabled={pending}>Ajouter</Button>
+                  <Button type="submit" disabled={pending}>Ajouter</Button>
                 </form>
               </article>
             ))}
@@ -380,7 +380,7 @@ export function AdminDashboard({
                 <option value="true">Actif</option>
                 <option value="false">Inactif</option>
               </select>
-              <Button disabled={pending}>Ajouter</Button>
+              <Button type="submit" disabled={pending}>Ajouter</Button>
             </form>
             {overview.contacts.map((contact) => (
               <form
@@ -405,7 +405,7 @@ export function AdminDashboard({
                   <option value="true">Actif</option>
                   <option value="false">Inactif</option>
                 </select>
-                <Button disabled={pending}>Modifier</Button>
+                <Button type="submit" disabled={pending}>Modifier</Button>
               </form>
             ))}
           </section>
