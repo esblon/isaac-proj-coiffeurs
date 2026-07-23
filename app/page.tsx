@@ -17,6 +17,7 @@ import { CartDrawer } from "@/components/cart-drawer"
 import { CartAddedToast } from "@/components/cart-added-toast"
 import { CollapsibleSection } from "@/components/collapsible-section"
 import { ThemeChooser } from "@/components/theme-chooser"
+import { AvailabilityBrowser } from "@/components/availability-browser"
 
 export default function Page() {
   return (
@@ -29,6 +30,7 @@ export default function Page() {
           <Services />
           <KitShop />
           <Subscription />
+          <AvailabilityBrowser />
 
           {/* Sections secondaires : repliées, à dérouler au clic */}
           <CollapsibleSection

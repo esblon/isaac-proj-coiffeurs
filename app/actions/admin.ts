@@ -12,10 +12,12 @@ import {
   orders,
   partnerApplications,
   partnerInvitations,
+  partnerAvailabilities,
   partnerLedger,
   partners,
   user,
 } from "@/lib/db/schema"
+import { sectorSchema } from "@/lib/availability"
 import { getAdminSession } from "@/lib/admin"
 import { sendEmail } from "@/lib/email"
 
@@ -121,6 +123,7 @@ export async function createPartnerAndInvite(input: unknown) {
       name: z.string().trim().min(2).max(100),
       email: z.string().trim().email().max(254),
       phone: phoneSchema,
+      sector: sectorSchema,
     })
     .parse(input)
   const email = parsed.email.toLowerCase()
@@ -142,6 +145,7 @@ export async function createPartnerAndInvite(input: unknown) {
       name: parsed.name,
       email,
       phone: parsed.phone,
+      sector: parsed.sector,
       status: "invite",
       invitedAt: new Date(),
     })
@@ -189,6 +193,26 @@ export async function addPartnerLedgerEntry(input: unknown) {
     amount: parsed.amount,
   })
   revalidatePath("/admin")
+  return { ok: true }
+}
+
+export async function updatePartnerSector(input: unknown) {
+  const actor = await requireAdmin()
+  const parsed = z
+    .object({
+      partnerId: z.number().int().positive(),
+      sector: sectorSchema,
+    })
+    .parse(input)
+  await db
+    .update(partners)
+    .set({ sector: parsed.sector, updatedAt: new Date() })
+    .where(eq(partners.id, parsed.partnerId))
+  await audit(actor, "partner", parsed.partnerId, "sector_updated", {
+    sector: parsed.sector,
+  })
+  revalidatePath("/admin")
+  revalidatePath("/")
   return { ok: true }
 }
 
@@ -240,6 +264,7 @@ export async function getAdminOverview() {
     contactRows,
     ledgerRows,
     auditRows,
+    availabilityRows,
   ] = await Promise.all([
     db.select().from(orders).orderBy(desc(orders.createdAt)),
     db.select().from(partnerApplications).orderBy(desc(partnerApplications.createdAt)),
@@ -249,6 +274,10 @@ export async function getAdminOverview() {
     db.select().from(contactNumbers).orderBy(desc(contactNumbers.updatedAt)),
     db.select().from(partnerLedger).orderBy(desc(partnerLedger.createdAt)),
     db.select().from(adminAuditEvents).orderBy(desc(adminAuditEvents.createdAt)).limit(100),
+    db
+      .select()
+      .from(partnerAvailabilities)
+      .orderBy(partnerAvailabilities.startsAt),
   ])
 
   const totalRevenue = ordersRows.reduce((sum, order) => sum + order.total, 0)
@@ -282,6 +311,9 @@ export async function getAdminOverview() {
     partners: partnerRows.map((partner) => ({
       ...partner,
       ledger: ledgerRows.filter((entry) => entry.partnerId === partner.id),
+      availabilities: availabilityRows.filter(
+        (availability) => availability.partnerId === partner.id,
+      ),
     })),
     contacts: contactRows,
     audit: auditRows,

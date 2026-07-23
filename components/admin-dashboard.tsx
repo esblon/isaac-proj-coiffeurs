@@ -9,6 +9,7 @@ import {
   createPartnerAndInvite,
   updateContactNumber,
   updateOrderRequest,
+  updatePartnerSector,
   updatePartnerApplication,
   type AdminOverview,
 } from "@/app/actions/admin"
@@ -24,7 +25,13 @@ import {
   Wallet,
 } from "lucide-react"
 
-type Tab = "orders" | "applications" | "partners" | "contacts" | "history"
+type Tab =
+  | "orders"
+  | "applications"
+  | "partners"
+  | "schedules"
+  | "contacts"
+  | "history"
 
 const money = (value: number) => `${value.toLocaleString("fr-FR")} FCFA`
 const date = (value: string | Date) =>
@@ -105,6 +112,7 @@ export function AdminDashboard({
             ["orders", "Demandes coiffure"],
             ["applications", "Candidatures"],
             ["partners", "Partenaires"],
+            ["schedules", "Agendas"],
             ["contacts", "Contacts"],
             ["history", "Historique admin"],
           ] as [Tab, string][]).map(([id, label]) => (
@@ -222,7 +230,7 @@ export function AdminDashboard({
         {tab === "partners" && (
           <section className="space-y-5">
             <form
-              className="grid gap-2 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_1fr_auto]"
+              className="grid gap-2 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_1fr_1fr_auto]"
               onSubmit={(event) => {
                 event.preventDefault()
                 const form = event.currentTarget
@@ -232,6 +240,7 @@ export function AdminDashboard({
                     name: data.get("name"),
                     email: data.get("email"),
                     phone: data.get("phone"),
+                    sector: data.get("sector"),
                   })
                   form.reset()
                 })
@@ -239,6 +248,7 @@ export function AdminDashboard({
             >
               <Input name="name" placeholder="Nom du partenaire" required />
               <Input name="email" type="email" placeholder="Email" required />
+              <Input name="sector" placeholder="Secteur (ex. Cocody)" required />
               <Input name="phone" placeholder="Téléphone" required />
               <Button disabled={pending}>Créer et inviter</Button>
             </form>
@@ -248,13 +258,39 @@ export function AdminDashboard({
                 <div className="flex flex-wrap justify-between gap-2">
                   <div>
                     <h2 className="font-semibold">{partner.name}</h2>
-                    <p className="text-sm text-muted-foreground">{partner.email} · {partner.phone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {partner.email} · {partner.phone} ·{" "}
+                      {partner.sector ?? "secteur non renseigné"}
+                    </p>
                   </div>
                   <span className="text-sm font-medium">{partner.status}</span>
                 </div>
                 <p className="mt-3 text-sm font-semibold">
                   Gains : {money(partner.ledger.reduce((sum, item) => sum + item.amount, 0))}
                 </p>
+                <form
+                  className="mt-3 flex max-w-md gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const data = new FormData(event.currentTarget)
+                    run(() =>
+                      updatePartnerSector({
+                        partnerId: partner.id,
+                        sector: data.get("sector"),
+                      }),
+                    )
+                  }}
+                >
+                  <Input
+                    name="sector"
+                    defaultValue={partner.sector ?? ""}
+                    placeholder="Secteur"
+                    required
+                  />
+                  <Button variant="outline" disabled={pending}>
+                    Modifier le secteur
+                  </Button>
+                </form>
                 <form
                   className="mt-3 grid gap-2 md:grid-cols-[150px_1fr_160px_auto]"
                   onSubmit={(event) => {
@@ -281,6 +317,42 @@ export function AdminDashboard({
                 </form>
               </article>
             ))}
+          </section>
+        )}
+
+        {tab === "schedules" && (
+          <section className="space-y-4">
+            {overview.partners.map((partner) => (
+              <article key={partner.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="font-semibold">{partner.name}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {partner.sector ?? "Secteur non renseigné"} · {partner.status}
+                    </p>
+                  </div>
+                  <span className="text-sm">
+                    {partner.availabilities.filter(
+                      (slot) =>
+                        slot.status === "disponible" &&
+                        new Date(slot.startsAt) > new Date(),
+                    ).length}{" "}
+                    créneau(x) à venir
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {partner.availabilities.map((slot) => (
+                    <p key={slot.id} className="rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                      {date(slot.startsAt)} → {date(slot.endsAt)} · {slot.status}
+                    </p>
+                  ))}
+                  {!partner.availabilities.length && (
+                    <p className="text-sm text-muted-foreground">Agenda vide.</p>
+                  )}
+                </div>
+              </article>
+            ))}
+            {!overview.partners.length && <Empty label="Aucun partenaire." />}
           </section>
         )}
 
