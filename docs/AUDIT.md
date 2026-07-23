@@ -78,7 +78,7 @@ Le build recense 14 routes : `/`, `/_not-found`, quatre routes d’administratio
 - **Données** : PostgreSQL via `pg` et Drizzle ORM.
 - **Authentification** : Better Auth avec email/mot de passe, sessions et réinitialisation par Resend.
 - **Notifications** : intégrations directes Twilio SMS et Meta WhatsApp.
-- **Observabilité** : Vercel Analytics en production seulement.
+- **Observabilité initiale** : Vercel Analytics était présent lors de l’audit ; la Phase 0 le retire pour préparer CloudWatch sur AWS.
 
 Cette architecture monolithique est adaptée au stade actuel et peut rester la base du MVP. La faiblesse principale n’est pas le monolithe : c’est l’absence d’une couche métier explicite entre les composants/routes et la base.
 

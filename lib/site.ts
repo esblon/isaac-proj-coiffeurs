@@ -1,15 +1,9 @@
-// Lien public du site web.
-// Après "Publish", Vercel expose automatiquement le domaine de production via
-// NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL : le lien se renseigne donc tout seul.
-// Pour forcer un domaine personnalisé (ex: https://coiffeurs225.com),
-// modifiez la valeur de secours ci-dessous.
-const FALLBACK_SITE_URL = "https://coiffeurs225.vercel.app"
+// URL publique servie par CloudFront/ALB sur AWS.
+const FALLBACK_SITE_URL = "http://localhost:3000"
 
-const vercelProductionUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
-
-export const SITE_URL = vercelProductionUrl
-  ? `https://${vercelProductionUrl}`
-  : FALLBACK_SITE_URL
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? FALLBACK_SITE_URL
+).replace(/\/$/, "")
 
 // Lien de l'application mobile.
 // Le site est une PWA installable : ce lien ouvre/installe l'app sur le téléphone.

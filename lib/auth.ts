@@ -2,13 +2,7 @@ import { betterAuth } from "better-auth"
 import { pool } from "@/lib/db"
 import { sendEmail } from "@/lib/email"
 
-const baseURL =
-  process.env.BETTER_AUTH_URL ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.V0_RUNTIME_URL ?? "http://localhost:3000")
+const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
 
 const secret = process.env.BETTER_AUTH_SECRET
 if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
@@ -62,11 +56,6 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
-    ...(process.env.V0_RUNTIME_URL ? [process.env.V0_RUNTIME_URL] : []),
-    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
-      : []),
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 jours

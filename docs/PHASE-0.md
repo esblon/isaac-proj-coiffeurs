@@ -13,6 +13,7 @@
 - réponse de réinitialisation générique pour empêcher l’énumération des comptes ;
 - en-têtes de sécurité HTTP de base ;
 - Next.js mis à jour vers `16.2.11`, dépendances vulnérables remplacées et outils de génération déplacés en développement ;
+- dépendances, métadonnées et variables d’exécution Vercel supprimées ; URL publique fournie par `NEXT_PUBLIC_SITE_URL` sur AWS ;
 - build TypeScript bloquant, ESLint, Vitest, audit et CI GitHub ;
 - versions pnpm/Node de CI et scripts natifs explicitement configurés.
 
@@ -24,6 +25,7 @@ Copier `.env.example` vers `.env.local` et renseigner au minimum :
 - `BETTER_AUTH_URL` ;
 - `BETTER_AUTH_SECRET` généré aléatoirement (32 caractères minimum) ;
 - `ADMIN_EMAILS`.
+- `NEXT_PUBLIC_SITE_URL`, égal à l’URL CloudFront/ALB de l’environnement.
 
 Les clés Twilio et WhatsApp sont optionnelles. Sans elles, la commande reste enregistrée et le parcours conserve son repli WhatsApp côté client.
 
@@ -44,6 +46,17 @@ Les anciens liens administrateur ne fonctionnent plus. Avant le déploiement :
 - les notifications sont synchrones ; l’outbox/SQS appartient à la Phase 8 ;
 - le MFA administrateur nécessite une évolution Better Auth dédiée ;
 - les migrations métier et l’idempotence transactionnelle complète appartiennent aux phases suivantes.
+
+## Next step — socle de déploiement AWS
+
+Ne pas connecter cette PR à Vercel. Après validation fonctionnelle locale :
+
+1. préparer une image Docker Next.js non privilégiée ;
+2. créer un environnement AWS de développement par Infrastructure as Code ;
+3. provisionner ECR, le compute (App Runner ou ECS Fargate), RDS PostgreSQL privé, Secrets Manager et les logs CloudWatch ;
+4. exposer l’application par CloudFront/ALB avec TLS ;
+5. configurer les variables de `.env.example` dans Secrets Manager ou le service de déploiement ;
+6. exécuter un smoke test AWS avant toute promotion.
 
 ## Validation
 
